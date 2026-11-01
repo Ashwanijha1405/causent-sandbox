@@ -10,7 +10,7 @@ const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 
 const DefaultLength = 7
 
-func Generate(length int) (string, error) {
+func NewCode(length int) (string, error) {
 	if length <= 0 {
 		return "", errors.New("length must be greater than zero")
 	}
