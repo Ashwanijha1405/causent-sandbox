@@ -1,0 +1,111 @@
+services:
+  api:
+    image: url-shortener-api:latest
+    container_name: url-shortener-api
+    restart: unless-stopped
+
+    environment:
+      PORT: "8080"
+
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/url_shortener"
+
+      DB_MAX_CONNS: "10"
+      DB_MIN_CONNS: "2"
+      DB_MAX_CONN_LIFETIME: "1h"
+
+      SERVER_SHUTDOWN_TIMEOUT: "5s"
+      SERVER_MAX_BODY_BYTES: "10240"
+
+      REDIS_ADDR: "redis:6379"
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      REDIS_TTL: "24h"
+      REDIS_ENABLED: "true"
+
+      RATE_LIMIT_RPS: "5"
+      RATE_LIMIT_BURST: "10"
+      RATE_LIMIT_ENABLED: "true"
+
+      LOG_LEVEL: "INFO"
+      LOG_FORMAT: "json"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: url-shortener-frontend:latest
+    container_name: url-shortener-frontend
+    restart: unless-stopped
+
+    environment:
+      BACKEND_URL: "http://api:8080"
+
+    depends_on:
+      api:
+        condition: service_started
+
+  postgres:
+    image: postgres:18-alpine
+    container_name: url-shortener-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: url_shortener
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d url_shortener"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    container_name: url-shortener-redis
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "ping"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: url-shortener-caddy
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+    depends_on:
+      frontend:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
