@@ -70,7 +70,6 @@ func ValidateURL(rawURL string) error {
 
 func isBlockedIP(ip net.IP) bool {
 	if ip.IsLoopback() ||
-		ip.IsPrivate() ||
 		ip.IsLinkLocalUnicast() ||
 		ip.IsLinkLocalMulticast() ||
 		ip.IsUnspecified() ||
